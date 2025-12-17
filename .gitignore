@@ -38,7 +38,9 @@ venv.bak/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/media/
+# Media files are ignored but directory structure should be kept
+/media/*
+!/media/.gitkeep
 /staticfiles/
 /static/
 *.log.*
