@@ -22,6 +22,45 @@ class Command(BaseCommand):
             help='Очистить существующие категории и продукты перед импортом',
         )
 
+    def _is_category(self, line, next_line=None):
+        """Проверяет, является ли строка категорией"""
+        line = line.strip()
+        
+        # Категория НЕ должна:
+        if (re.match(r'^\d+\)', line) or  # Начинаться с номера
+            line.startswith('·') or  # Быть маркером списка
+            line.startswith('Объем') or
+            line.startswith('Цена') or
+            line.startswith('Стоимость') or
+            line.lower().startswith('состав') or
+            line.startswith('Ассортимент') or
+            line.lower().startswith('подается') or
+            line.lower().startswith('сливочно') or
+            len(line) < 3 or
+            re.search(r'\d+\s*(?:рублей?|₽|р|P)', line) or  # Содержать цену
+            (',' in line and len([x for x in line.split(',') if x.strip()]) > 2)):  # Список ингредиентов
+            return False
+        
+        # Категория должна быть короткой (обычно 1-4 слова)
+        words = line.split()
+        if len(words) > 5:
+            return False
+        
+        # Если следующая строка начинается с номера продукта - это точно категория
+        if next_line and re.match(r'^\d+\)', next_line.strip()):
+            return True
+        
+        # Категории обычно не содержат много запятых (кроме специальных случаев)
+        if line.count(',') > 1:
+            return False
+        
+        # Исключения - точно не категории
+        if any(x in line.lower() for x in ['куриная грудка', 'томат', 'сыр', 'фарш', 'грибы', 'соус']):
+            if ',' in line:
+                return False
+        
+        return True
+
     def handle(self, *args, **options):
         file_path = options['file']
         clear_existing = options['clear']
@@ -49,6 +88,7 @@ class Command(BaseCommand):
         
         while i < len(lines):
             line = lines[i].strip()
+            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ''
             
             # Пропускаем пустые строки
             if not line:
@@ -56,33 +96,7 @@ class Command(BaseCommand):
                 continue
             
             # Проверка на категорию
-            # Категория должна быть:
-            # - Не начинаться с номера (1), 2), и т.д.)
-            # - Не быть описанием продукта (не содержать "Состав", "подается", и т.д.)
-            # - Не быть маркером списка (·)
-            # - Не быть мета-информацией (Объем, Цена, и т.д.)
-            # - Быть достаточно короткой (не более 50 символов обычно)
-            # - Не содержать запятые в начале (описания продуктов часто начинаются с ингредиентов через запятую)
-            is_category = (
-                not re.match(r'^\d+\)', line) and
-                not line.startswith('·') and
-                not line.startswith('Объем') and
-                not line.startswith('Цена') and
-                not line.startswith('Стоимость') and
-                not line.lower().startswith('состав') and
-                not line.startswith('Ассортимент') and
-                not line.lower().startswith('подается') and
-                not line.lower().startswith('сливочно') and
-                len(line) > 2 and
-                len(line) < 60 and  # Категории обычно короткие
-                not re.search(r'\d+\s*(?:рублей?|₽|р|P)', line) and  # Не содержит цену
-                not (',' in line and len(line.split(',')) > 2) and  # Не список ингредиентов
-                not line.lower().startswith('классический') and
-                not line.lower().startswith('авторские') and
-                not line.lower().startswith('прочие')
-            )
-            
-            if is_category:
+            if self._is_category(line, next_line):
                 # Сохраняем предыдущий продукт
                 if current_product:
                     self._save_product(current_product, product_description, product_composition)
@@ -159,7 +173,9 @@ class Command(BaseCommand):
                 elif not re.match(r'^\d+\)', line) and not line.startswith('·'):
                     # Дополнительное описание (если не начинается с номера и не маркер)
                     if line and len(line) > 3 and not re.search(r'^\d+\s*(?:рублей?|₽|р|P)', line):
-                        product_description.append(line)
+                        # Проверяем, не является ли это категорией
+                        if not self._is_category(line):
+                            product_description.append(line)
             
             # Обработка специальных форматов (чай, лимонады, кофе)
             if current_category:
@@ -243,4 +259,3 @@ class Command(BaseCommand):
             is_available=True
         )
         self.stdout.write(f'  Создан продукт: {product_data["name"]} - {product_data["price"]} руб.')
-
