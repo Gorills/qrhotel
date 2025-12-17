@@ -70,13 +70,18 @@ class Room(models.Model):
     
     def generate_qr_code(self):
         """Генерация QR-кода для номера"""
+        from django.conf import settings
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
-        url = f"http://localhost:8000/order/{self.slug}/"
+        # Используем домен из настроек
+        site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+        # Убираем слэш в конце если есть
+        site_url = site_url.rstrip('/')
+        url = f"{site_url}/order/{self.slug}/"
         qr.add_data(url)
         qr.make(fit=True)
         

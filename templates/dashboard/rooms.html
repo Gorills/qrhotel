@@ -46,10 +46,18 @@
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {% for room in floor.rooms.all %}
                 <div class="border-2 border-gray-200 rounded-lg p-3 md:p-4 hover:border-indigo-300 transition relative">
-                    <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
-                            class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation z-10">
-                        🗑️
-                    </button>
+                    <div class="absolute top-1 right-1 flex gap-1 z-10">
+                        <button onclick="regenerateQR({{ room.id }}, '{{ room.number }}')" 
+                                class="bg-blue-600 text-white p-1 rounded hover:bg-blue-700 transition text-xs touch-manipulation" 
+                                title="Перегенерировать QR-код">
+                            🔄
+                        </button>
+                        <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
+                                class="bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation" 
+                                title="Удалить номер">
+                            🗑️
+                        </button>
+                    </div>
                     <div class="text-center">
                         {% if room.qr_code %}
                         <img src="{{ room.qr_code.url }}" alt="QR Code" class="w-full mb-2">
@@ -88,10 +96,18 @@
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                 {% for room in floor.rooms.all %}
                 <div class="border-2 border-gray-200 rounded-lg p-3 md:p-4 hover:border-indigo-300 transition relative">
-                    <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
-                            class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation z-10">
-                        🗑️
-                    </button>
+                    <div class="absolute top-1 right-1 flex gap-1 z-10">
+                        <button onclick="regenerateQR({{ room.id }}, '{{ room.number }}')" 
+                                class="bg-blue-600 text-white p-1 rounded hover:bg-blue-700 transition text-xs touch-manipulation" 
+                                title="Перегенерировать QR-код">
+                            🔄
+                        </button>
+                        <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
+                                class="bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation" 
+                                title="Удалить номер">
+                            🗑️
+                        </button>
+                    </div>
                     <div class="text-center">
                         {% if room.qr_code %}
                         <img src="{{ room.qr_code.url }}" alt="QR Code" class="w-full mb-2">
@@ -216,6 +232,30 @@ function deleteRoom(roomId, roomNumber, ordersCount) {
         .catch(error => {
             console.error('Error:', error);
             alert('Произошла ошибка при удалении номера');
+        });
+    }
+}
+
+function regenerateQR(roomId, roomNumber) {
+    if (confirm(`Перегенерировать QR-код для номера "${roomNumber}"?`)) {
+        fetch(`/dashboard/room/${roomId}/regenerate-qr/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при перегенерации QR-кода');
         });
     }
 }

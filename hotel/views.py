@@ -479,6 +479,32 @@ def dashboard_room_delete(request, room_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def dashboard_room_regenerate_qr(request, room_id):
+    """Перегенерация QR-кода для номера"""
+    room = get_object_or_404(Room, id=room_id)
+    room_name = str(room)
+    
+    try:
+        # Удаляем старый QR-код если есть
+        if room.qr_code:
+            room.qr_code.delete(save=False)
+        
+        # Генерируем новый QR-код
+        room.generate_qr_code()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'QR-код для номера "{room_name}" успешно перегенерирован'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Ошибка при перегенерации QR-кода: {str(e)}'
+        })
+
+
+@login_required
 def dashboard_category_add(request):
     """Добавление категории"""
     if request.method == 'POST':

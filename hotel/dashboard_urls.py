@@ -17,6 +17,7 @@ urlpatterns = [
     path('floor/<int:floor_id>/delete/', views.dashboard_floor_delete, name='dashboard_floor_delete'),
     path('room/add/', views.dashboard_room_add, name='dashboard_room_add'),
     path('room/<int:room_id>/delete/', views.dashboard_room_delete, name='dashboard_room_delete'),
+    path('room/<int:room_id>/regenerate-qr/', views.dashboard_room_regenerate_qr, name='dashboard_room_regenerate_qr'),
     path('category/add/', views.dashboard_category_add, name='dashboard_category_add'),
     path('category/<int:category_id>/edit/', views.dashboard_category_edit, name='dashboard_category_edit'),
     path('category/<int:category_id>/delete/', views.dashboard_category_delete, name='dashboard_category_delete'),

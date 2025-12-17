@@ -28,7 +28,14 @@ def generate_qr_images(request):
                 box_size=10,
                 border=0,  # Без отступов - размер точно по QR-коду
             )
-            url = request.build_absolute_uri(room.get_absolute_url())
+            # Используем домен из настроек или из request
+            from django.conf import settings
+            site_url = getattr(settings, 'SITE_URL', None)
+            if site_url:
+                site_url = site_url.rstrip('/')
+                url = f"{site_url}{room.get_absolute_url()}"
+            else:
+                url = request.build_absolute_uri(room.get_absolute_url())
             qr.add_data(url)
             qr.make(fit=True)
             
