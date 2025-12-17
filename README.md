@@ -26,6 +26,31 @@
 - **PDF**: reportlab
 - **Telegram**: aiogram
 
+## Деплой на сервер
+
+### Синхронизация с репозиторием
+
+Для обновления кода на сервере:
+
+```bash
+# На сервере
+cd /home/s/shopds7k/dostavka-po-nomeram/public_html
+git fetch origin
+git reset --hard origin/main
+
+# Установка зависимостей и миграции
+ssh localhost -p222
+cd /home/s/shopds7k/dostavka-po-nomeram/public_html
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+
+# Перезапуск Passenger
+mkdir -p tmp
+touch tmp/restart.txt
+```
+
 ## Установка и настройка
 
 ### 1. Установка зависимостей
