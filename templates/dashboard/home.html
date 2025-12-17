@@ -1,0 +1,391 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Мониторинг заказов{% endblock %}
+
+{% block content %}
+<div class="mb-6 md:mb-8">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Live Мониторинг</h1>
+    <p class="text-sm md:text-base text-gray-600">Отслеживание заказов в реальном времени</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-xs md:text-sm">Новые заказы</p>
+                <p class="text-2xl md:text-3xl font-bold text-yellow-600">{{ stats.new_orders }}</p>
+            </div>
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-xl md:text-2xl">🆕</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-xs md:text-sm">Готовятся</p>
+                <p class="text-2xl md:text-3xl font-bold text-blue-600">{{ stats.cooking_orders }}</p>
+            </div>
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-xl md:text-2xl">🍳</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-xs md:text-sm">Заказов сегодня</p>
+                <p class="text-2xl md:text-3xl font-bold text-indigo-600">{{ stats.today_orders_count }}</p>
+            </div>
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-xl md:text-2xl">📋</span>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-xs md:text-sm">Выручка сегодня</p>
+                <p class="text-2xl md:text-3xl font-bold text-green-600">{{ stats.today_revenue|floatformat:0 }} ₽</p>
+            </div>
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <span class="text-xl md:text-2xl">💰</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orders Kanban -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+        <h2 class="text-xl md:text-2xl font-bold text-gray-800">Активные заказы</h2>
+        <button onclick="location.reload()" class="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition font-medium touch-manipulation">
+            Обновить
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6" id="orders-container">
+        <!-- New Orders -->
+        <div data-status="new">
+            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 bg-yellow-100 px-3 md:px-4 py-2 rounded-lg">🆕 Новые</h3>
+            <div class="space-y-3 md:space-y-4">
+                {% for order in orders %}
+                {% if order.status == 'new' %}
+                <div id="order-{{ order.id }}" class="bg-white border-2 border-yellow-200 rounded-lg p-3 md:p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <p class="font-medium">📍 {{ order.room.number }}</p>
+                                {% if order.room.floor.building %}
+                                <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
+                                {% else %}
+                                <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-base md:text-lg font-bold text-indigo-600 ml-2 whitespace-nowrap">{{ order.total_price|floatformat:2 }} ₽</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">{{ order.created_at|date:"H:i:s" }}</p>
+                    <div class="bg-gray-50 rounded-lg p-2 md:p-3 mb-3">
+                        <p class="text-xs font-semibold text-gray-700 mb-2">Состав заказа:</p>
+                        <div class="space-y-1">
+                            {% for item in order.items.all %}
+                            <div class="flex justify-between items-center text-xs md:text-sm">
+                                <span class="text-gray-700 flex-1 pr-2 truncate">{{ item.product.name }}</span>
+                                <span class="text-gray-600 font-medium whitespace-nowrap">x{{ item.quantity }} = {{ item.price_at_moment|floatformat:2 }} ₽</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                        <button onclick="updateOrderStatus({{ order.id }}, 'cooking')" class="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-blue-700 transition touch-manipulation">
+                            Принять
+                        </button>
+                        <button onclick="updateOrderStatus({{ order.id }}, 'done')" class="flex-1 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-green-700 transition touch-manipulation">
+                            Готово
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Cooking Orders -->
+        <div data-status="cooking">
+            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 bg-blue-100 px-3 md:px-4 py-2 rounded-lg">🍳 Готовятся</h3>
+            <div class="space-y-3 md:space-y-4">
+                {% for order in orders %}
+                {% if order.status == 'cooking' %}
+                <div id="order-{{ order.id }}" class="bg-white border-2 border-blue-200 rounded-lg p-4 shadow-sm">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <p class="font-medium">📍 {{ order.room.number }}</p>
+                                {% if order.room.floor.building %}
+                                <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
+                                {% else %}
+                                <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-base md:text-lg font-bold text-indigo-600 ml-2 whitespace-nowrap">{{ order.total_price|floatformat:2 }} ₽</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">{{ order.created_at|date:"H:i:s" }}</p>
+                    <div class="bg-gray-50 rounded-lg p-2 md:p-3 mb-3">
+                        <p class="text-xs font-semibold text-gray-700 mb-2">Состав заказа:</p>
+                        <div class="space-y-1">
+                            {% for item in order.items.all %}
+                            <div class="flex justify-between items-center text-xs md:text-sm">
+                                <span class="text-gray-700 flex-1 pr-2 truncate">{{ item.product.name }}</span>
+                                <span class="text-gray-600 font-medium whitespace-nowrap">x{{ item.quantity }} = {{ item.price_at_moment|floatformat:2 }} ₽</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button onclick="updateOrderStatus({{ order.id }}, 'done')" class="w-full bg-green-600 text-white px-4 py-3 rounded text-sm font-medium hover:bg-green-700 transition touch-manipulation">
+                        ✅ Выполнено
+                    </button>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Done Orders -->
+        <div data-status="done">
+            <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-3 md:mb-4 bg-green-100 px-3 md:px-4 py-2 rounded-lg">✅ Выполнены</h3>
+            <div class="space-y-3 md:space-y-4">
+                {% for order in orders %}
+                {% if order.status == 'done' %}
+                <div id="order-{{ order.id }}" class="bg-white border-2 border-green-200 rounded-lg p-4 shadow-sm opacity-75">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <p class="font-medium">📍 {{ order.room.number }}</p>
+                                {% if order.room.floor.building %}
+                                <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
+                                {% else %}
+                                <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="text-base md:text-lg font-bold text-indigo-600 ml-2 whitespace-nowrap">{{ order.total_price|floatformat:2 }} ₽</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">{{ order.created_at|date:"H:i:s" }}</p>
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="text-xs font-semibold text-gray-700 mb-2">Состав заказа:</p>
+                        <div class="space-y-1">
+                            {% for item in order.items.all %}
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-700">{{ item.product.name }}</span>
+                                <span class="text-gray-600 font-medium">x{{ item.quantity }} = {{ item.price_at_moment|floatformat:2 }} ₽</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateOrderStatus(orderId, status) {
+    const formData = new FormData();
+    formData.append('status', status);
+    formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+    
+    fetch(`/dashboard/orders/${orderId}/update-status/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Принудительно обновляем список заказов после смены статуса
+            updateOrders(true);
+        } else {
+            alert('Ошибка при обновлении статуса: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при обновлении статуса заказа');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Автоматическое обновление заказов каждые 3 секунды (без перезагрузки страницы)
+let ordersUpdateInterval;
+let lastOrdersHash = '';
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем хеш текущих заказов
+    fetch('/api/orders/live/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.orders) {
+                lastOrdersHash = data.orders.map(o => `order-${o.id}-${o.status}`).sort().join(',');
+            }
+        });
+    
+    // Обновляем заказы каждые 3 секунды
+    ordersUpdateInterval = setInterval(() => {
+        if (!document.hidden) {
+            updateOrders(false);
+        }
+    }, 3000);
+    
+    // Обрабатываем якорь для перехода к заказу
+    if (window.location.hash) {
+        const orderId = window.location.hash.replace('#order-', '');
+        setTimeout(() => {
+            const orderElement = document.getElementById('order-' + orderId);
+            if (orderElement) {
+                orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                orderElement.classList.add('ring-4', 'ring-yellow-400', 'ring-opacity-50');
+                setTimeout(() => {
+                    orderElement.classList.remove('ring-4', 'ring-yellow-400', 'ring-opacity-50');
+                }, 2000);
+            }
+        }, 500);
+    }
+});
+
+function getOrdersHash() {
+    const orders = document.querySelectorAll('[id^="order-"]');
+    return Array.from(orders).map(el => el.id).sort().join(',');
+}
+
+function updateOrders(force = false) {
+    fetch('/api/orders/live/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.orders) {
+                // Создаем хеш на основе ID и статусов заказов
+                const currentHash = data.orders.map(o => `order-${o.id}-${o.status}`).sort().join(',');
+                
+                // Обновляем если есть изменения или принудительно
+                if (force || currentHash !== lastOrdersHash) {
+                    renderOrders(data.orders);
+                    lastOrdersHash = currentHash;
+                }
+            }
+        })
+        .catch(error => console.error('Error updating orders:', error));
+}
+
+function renderOrders(orders) {
+    const container = document.getElementById('orders-container');
+    if (!container) return;
+    
+    // Группируем заказы по статусам
+    const ordersByStatus = {
+        'new': [],
+        'cooking': [],
+        'done': []
+    };
+    
+    orders.forEach(order => {
+        if (ordersByStatus.hasOwnProperty(order.status)) {
+            ordersByStatus[order.status].push(order);
+        }
+    });
+    
+    // Обновляем каждую колонку
+    ['new', 'cooking', 'done'].forEach(status => {
+        const statusContainer = container.querySelector(`[data-status="${status}"]`);
+        if (!statusContainer) return;
+        
+        const ordersList = statusContainer.querySelector('.space-y-3, .space-y-4');
+        if (!ordersList) return;
+        
+        ordersList.innerHTML = ordersByStatus[status].map(order => renderOrderCard(order, status)).join('');
+    });
+}
+
+function renderOrderCard(order, status) {
+    const statusConfig = {
+        'new': { border: 'border-yellow-200', bg: 'bg-yellow-100', title: '🆕 Новые', buttons: true },
+        'cooking': { border: 'border-blue-200', bg: 'bg-blue-100', title: '🍳 Готовятся', buttons: false },
+        'done': { border: 'border-green-200', bg: 'bg-green-100', title: '✅ Выполнены', buttons: false, opacity: 'opacity-75' }
+    };
+    
+    const config = statusConfig[status] || statusConfig['new'];
+    
+    let buttonsHtml = '';
+    if (status === 'new') {
+        buttonsHtml = `
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                <button onclick="updateOrderStatus(${order.id}, 'cooking')" class="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-blue-700 transition touch-manipulation">
+                    Принять
+                </button>
+                <button onclick="updateOrderStatus(${order.id}, 'done')" class="flex-1 bg-green-600 text-white px-4 py-2.5 rounded text-sm font-medium hover:bg-green-700 transition touch-manipulation">
+                    Готово
+                </button>
+            </div>
+        `;
+    } else if (status === 'cooking') {
+        buttonsHtml = `
+            <button onclick="updateOrderStatus(${order.id}, 'done')" class="w-full bg-green-600 text-white px-4 py-3 rounded text-sm font-medium hover:bg-green-700 transition touch-manipulation">
+                ✅ Выполнено
+            </button>
+        `;
+    }
+    
+    const itemsHtml = order.items.map(item => `
+        <div class="flex justify-between items-center text-xs md:text-sm">
+            <span class="text-gray-700 flex-1 pr-2 truncate">${item.name}</span>
+            <span class="text-gray-600 font-medium whitespace-nowrap">x${item.quantity} = ${item.price.toFixed(2)} ₽</span>
+        </div>
+    `).join('');
+    
+    const buildingInfo = order.building ? `${order.building}, Этаж ${order.floor}` : `Этаж ${order.floor}`;
+    
+    return `
+        <div id="order-${order.id}" class="bg-white border-2 ${config.border} rounded-lg p-3 md:p-4 shadow-sm ${config.opacity || ''}">
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                    <p class="font-bold text-gray-800">Заказ #${order.id}</p>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <p class="font-medium">📍 ${order.room_number}</p>
+                        <p class="text-xs text-gray-500">${buildingInfo}</p>
+                    </div>
+                </div>
+                <span class="text-base md:text-lg font-bold text-indigo-600 ml-2 whitespace-nowrap">${order.total_price.toFixed(2)} ₽</span>
+            </div>
+            <p class="text-xs text-gray-500 mb-3">${order.created_at}</p>
+            <div class="bg-gray-50 rounded-lg p-2 md:p-3 mb-3">
+                <p class="text-xs font-semibold text-gray-700 mb-2">Состав заказа:</p>
+                <div class="space-y-1">
+                    ${itemsHtml}
+                </div>
+            </div>
+            ${buttonsHtml}
+        </div>
+    `;
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,239 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Управление номерами{% endblock %}
+
+{% block content %}
+<div class="mb-6 md:mb-8">
+    <div class="mb-4">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Управление номерами</h1>
+        <p class="text-sm md:text-base text-gray-600">Генерация QR-кодов для номеров отеля</p>
+    </div>
+    <div class="flex flex-wrap gap-2 md:gap-4">
+        <a href="{% url 'generate_qr_images' %}" class="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-indigo-700 transition font-medium text-center text-sm md:text-base touch-manipulation">
+            📦 Скачать QR
+        </a>
+        <a href="{% url 'dashboard_building_add' %}" class="flex-1 sm:flex-none bg-purple-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-purple-700 transition font-medium text-center text-sm md:text-base touch-manipulation">
+            + Корпус
+        </a>
+        <a href="{% url 'dashboard_floor_add' %}" class="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-blue-700 transition font-medium text-center text-sm md:text-base touch-manipulation">
+            + Этаж
+        </a>
+        <a href="{% url 'dashboard_room_add' %}" class="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-green-700 transition font-medium text-center text-sm md:text-base touch-manipulation">
+            + Номер
+        </a>
+    </div>
+</div>
+
+<div class="space-y-8">
+    {% for building in buildings %}
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-800">{{ building.name }}</h2>
+            <button onclick="deleteBuilding({{ building.id }}, '{{ building.name }}', {{ building.floors.count }}, {{ building.total_rooms }})" 
+                    class="bg-red-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg hover:bg-red-700 transition font-medium text-sm md:text-base touch-manipulation">
+                🗑️ Удалить
+            </button>
+        </div>
+        {% for floor in building.floors.all %}
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base md:text-lg font-semibold text-gray-700">Этаж {{ floor.number }}</h3>
+                <button onclick="deleteFloor({{ floor.id }}, {{ floor.number }}, '{{ building.name }}', {{ floor.rooms.count }})" 
+                        class="bg-red-600 text-white px-2 py-1 md:px-3 md:py-1.5 rounded-lg hover:bg-red-700 transition font-medium text-xs md:text-sm touch-manipulation">
+                    🗑️ Удалить
+                </button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {% for room in floor.rooms.all %}
+                <div class="border-2 border-gray-200 rounded-lg p-3 md:p-4 hover:border-indigo-300 transition relative">
+                    <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
+                            class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation z-10">
+                        🗑️
+                    </button>
+                    <div class="text-center">
+                        {% if room.qr_code %}
+                        <img src="{{ room.qr_code.url }}" alt="QR Code" class="w-full mb-2">
+                        {% else %}
+                        <div class="w-full h-24 bg-gray-100 rounded flex items-center justify-center mb-2">
+                            <span class="text-gray-400 text-xs">Нет QR</span>
+                        </div>
+                        {% endif %}
+                        <p class="font-semibold text-gray-800 text-sm md:text-base">{{ room.number }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ room.slug }}</p>
+                        <a href="/order/{{ room.slug }}/" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 mt-1 inline-block">
+                            Открыть меню
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    
+    <!-- Этажи без корпуса -->
+    {% if floors %}
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-4">Этажи без корпуса</h2>
+        {% for floor in floors %}
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base md:text-lg font-semibold text-gray-700">Этаж {{ floor.number }}</h3>
+                <button onclick="deleteFloor({{ floor.id }}, {{ floor.number }}, null, {{ floor.rooms.count }})" 
+                        class="bg-red-600 text-white px-2 py-1 md:px-3 md:py-1.5 rounded-lg hover:bg-red-700 transition font-medium text-xs md:text-sm touch-manipulation">
+                    🗑️ Удалить
+                </button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {% for room in floor.rooms.all %}
+                <div class="border-2 border-gray-200 rounded-lg p-3 md:p-4 hover:border-indigo-300 transition relative">
+                    <button onclick="deleteRoom({{ room.id }}, '{{ room.number }}', {{ room.orders.count }})" 
+                            class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded hover:bg-red-700 transition text-xs touch-manipulation z-10">
+                        🗑️
+                    </button>
+                    <div class="text-center">
+                        {% if room.qr_code %}
+                        <img src="{{ room.qr_code.url }}" alt="QR Code" class="w-full mb-2">
+                        {% else %}
+                        <div class="w-full h-24 bg-gray-100 rounded flex items-center justify-center mb-2">
+                            <span class="text-gray-400 text-xs">Нет QR</span>
+                        </div>
+                        {% endif %}
+                        <p class="font-semibold text-gray-800 text-sm md:text-base">{{ room.number }}</p>
+                        <p class="text-xs text-gray-500 truncate">{{ room.slug }}</p>
+                        <a href="/order/{{ room.slug }}/" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800 mt-1 inline-block">
+                            Открыть меню
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if not buildings and not floors %}
+    <div class="bg-white rounded-xl shadow-md p-12 text-center">
+        <p class="text-gray-600 text-lg mb-4">Номера не добавлены</p>
+        <a href="{% url 'dashboard_room_add' %}" class="text-indigo-600 hover:text-indigo-800 underline">
+            Добавить номер
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function deleteBuilding(buildingId, buildingName, floorsCount, roomsCount) {
+    const message = `Вы уверены, что хотите удалить корпус "${buildingName}"?\n\n` +
+                   `⚠️ ВНИМАНИЕ: Это действие удалит:\n` +
+                   `• ${floorsCount} этаж(ей)\n` +
+                   `• ${roomsCount} номер(ов)\n\n` +
+                   `Это действие нельзя отменить!`;
+    
+    if (confirm(message)) {
+        fetch(`/dashboard/building/${buildingId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при удалении корпуса');
+        });
+    }
+}
+
+function deleteFloor(floorId, floorNumber, buildingName, roomsCount) {
+    const floorName = buildingName ? `${buildingName} - Этаж ${floorNumber}` : `Этаж ${floorNumber}`;
+    const message = `Вы уверены, что хотите удалить "${floorName}"?\n\n` +
+                   `⚠️ ВНИМАНИЕ: Это действие удалит:\n` +
+                   `• ${roomsCount} номер(ов)\n\n` +
+                   `Это действие нельзя отменить!`;
+    
+    if (confirm(message)) {
+        fetch(`/dashboard/floor/${floorId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при удалении этажа');
+        });
+    }
+}
+
+function deleteRoom(roomId, roomNumber, ordersCount) {
+    let message = `Вы уверены, что хотите удалить номер "${roomNumber}"?\n\n`;
+    
+    if (ordersCount > 0) {
+        message += `⚠️ ВНИМАНИЕ: У этого номера есть ${ordersCount} заказ(ов).\n` +
+                  `Номер с заказами нельзя удалить. Сначала удалите или архивируйте заказы.`;
+        alert(message);
+        return;
+    }
+    
+    message += `Это действие нельзя отменить!`;
+    
+    if (confirm(message)) {
+        fetch(`/dashboard/room/${roomId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при удалении номера');
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}
+

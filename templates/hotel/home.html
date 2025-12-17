@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}QR Hotel Service - Главная{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
+    <div class="max-w-4xl w-full text-center">
+        <!-- Logo/Header -->
+        <div class="mb-12">
+            <div class="inline-block bg-indigo-600 text-white rounded-2xl px-8 py-4 mb-6">
+                {% if site_settings.logo %}
+                <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }}" class="h-16 mx-auto mb-2">
+                {% endif %}
+                <h1 class="text-5xl font-bold">{{ site_settings.site_name }}</h1>
+            </div>
+            <p class="text-xl text-gray-700 mt-4">Система автоматизации Room Service для отелей</p>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                <div class="text-4xl mb-4">📱</div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Для гостей</h3>
+                <p class="text-gray-600">Заказывайте блюда через QR-код прямо из номера</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                <div class="text-4xl mb-4">📊</div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Для отеля</h3>
+                <p class="text-gray-600">Управляйте заказами и меню через удобный дашборд</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition">
+                <div class="text-4xl mb-4">⚡</div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">В реальном времени</h3>
+                <p class="text-gray-600">Мгновенные уведомления и обновления статусов</p>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Быстрые ссылки</h2>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="/dashboard/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium">
+                    📊 Дашборд
+                </a>
+                <a href="/accounts/login/" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium">
+                    🔑 Вход в систему
+                </a>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="mt-12 text-gray-600">
+            <p class="mb-2">Для доступа к системе войдите через дашборд</p>
+            <p class="text-sm">Гости могут заказывать блюда, отсканировав QR-код в номере</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

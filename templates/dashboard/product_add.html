@@ -1,0 +1,137 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Добавить блюдо{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Добавить блюдо</h1>
+    
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Основная информация -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Основная информация</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="category" class="block text-gray-700 font-medium mb-2">Категория *</label>
+                        <select name="category" id="category" required 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            <option value="">Выберите категорию</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="name" class="block text-gray-700 font-medium mb-2">Название блюда *</label>
+                        <input type="text" name="name" id="name" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="description" class="block text-gray-700 font-medium mb-2">Описание</label>
+                    <textarea name="description" id="description" rows="3" 
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              placeholder="Краткое описание блюда..."></textarea>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="mb-4">
+                        <label for="price" class="block text-gray-700 font-medium mb-2">Цена (₽) *</label>
+                        <input type="number" name="price" id="price" step="0.01" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="weight" class="block text-gray-700 font-medium mb-2">Вес/Объем</label>
+                        <input type="text" name="weight" id="weight" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                               placeholder="250г, 500мл">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="order_priority" class="block text-gray-700 font-medium mb-2">Порядок сортировки</label>
+                        <input type="number" name="order_priority" id="order_priority" value="0" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="image" class="block text-gray-700 font-medium mb-2">Изображение</label>
+                    <input type="file" name="image" id="image" accept="image/*" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <p class="text-sm text-gray-500 mt-1">Рекомендуемый размер: 800x600px</p>
+                </div>
+            </div>
+            
+            <!-- Информация о еде -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Информация о еде</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="composition" class="block text-gray-700 font-medium mb-2">Состав</label>
+                        <textarea name="composition" id="composition" rows="4" 
+                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                  placeholder="Список ингредиентов через запятую или построчно"></textarea>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="allergens" class="block text-gray-700 font-medium mb-2">Аллергены</label>
+                        <input type="text" name="allergens" id="allergens" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                               placeholder="глютен, лактоза, орехи">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label for="calories" class="block text-gray-700 font-medium mb-2">Калории (ккал)</label>
+                        <input type="number" name="calories" id="calories" min="0" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="cooking_time" class="block text-gray-700 font-medium mb-2">Время приготовления</label>
+                        <input type="text" name="cooking_time" id="cooking_time" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                               placeholder="15-20 мин">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label for="nutritional_info" class="block text-gray-700 font-medium mb-2">Пищевая ценность</label>
+                    <textarea name="nutritional_info" id="nutritional_info" rows="3" 
+                              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              placeholder="Белки: Xг, Жиры: Yг, Углеводы: Zг"></textarea>
+                </div>
+            </div>
+            
+            <!-- Настройки -->
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Настройки</h2>
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_available" checked class="mr-2 w-5 h-5">
+                        <span class="text-gray-700">Доступно (не в стоп-листе)</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="flex space-x-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Сохранить
+                </button>
+                <a href="{% url 'dashboard_menu' %}" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

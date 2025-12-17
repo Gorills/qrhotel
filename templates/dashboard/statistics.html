@@ -1,0 +1,87 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Статистика{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">Статистика</h1>
+    <p class="text-gray-600">Аналитика по заказам и выручке</p>
+</div>
+
+<!-- Revenue Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <p class="text-gray-600 text-sm mb-2">Выручка сегодня</p>
+        <p class="text-3xl font-bold text-indigo-600">{{ today_revenue|floatformat:0 }} ₽</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <p class="text-gray-600 text-sm mb-2">Выручка за неделю</p>
+        <p class="text-3xl font-bold text-blue-600">{{ week_revenue|floatformat:0 }} ₽</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <p class="text-gray-600 text-sm mb-2">Выручка за месяц</p>
+        <p class="text-3xl font-bold text-green-600">{{ month_revenue|floatformat:0 }} ₽</p>
+    </div>
+</div>
+
+<!-- Popular Products -->
+<div class="bg-white rounded-xl shadow-md p-6 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Популярные блюда</h2>
+    <div class="space-y-4">
+        {% for product in popular_products %}
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-4">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-16 h-16 object-cover rounded-lg">
+                {% else %}
+                <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                    <span class="text-gray-400">🍽️</span>
+                </div>
+                {% endif %}
+                <div>
+                    <p class="font-semibold text-gray-800">{{ product.name }}</p>
+                    <p class="text-sm text-gray-600">{{ product.category.name }}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-lg font-bold text-indigo-600">{{ product.total_ordered }}</p>
+                <p class="text-xs text-gray-500">заказов</p>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-gray-500 text-center py-8">Нет данных</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Daily Statistics -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">Статистика по дням (последние 7 дней)</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b">
+                    <th class="text-left py-3 px-4 text-gray-700 font-semibold">Дата</th>
+                    <th class="text-right py-3 px-4 text-gray-700 font-semibold">Заказов</th>
+                    <th class="text-right py-3 px-4 text-gray-700 font-semibold">Выручка</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in daily_stats %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-3 px-4">{{ stat.day }}</td>
+                    <td class="py-3 px-4 text-right font-semibold">{{ stat.count }}</td>
+                    <td class="py-3 px-4 text-right font-semibold text-indigo-600">{{ stat.revenue|floatformat:0 }} ₽</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="py-8 text-center text-gray-500">Нет данных</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+

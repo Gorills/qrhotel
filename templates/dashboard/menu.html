@@ -1,0 +1,170 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Управление меню{% endblock %}
+
+{% block content %}
+<div class="mb-6 md:mb-8 md:relative">
+    <div class="mb-4 md:mb-0">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-2">Управление меню</h1>
+        <p class="text-sm md:text-base text-gray-600">Редактирование категорий и блюд</p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 md:gap-3 mt-4 md:mt-0 md:absolute md:top-0 md:right-0">
+        <a href="{% url 'dashboard_category_add' %}" class="bg-indigo-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-indigo-700 transition font-medium text-center touch-manipulation text-sm md:text-base">
+            + Добавить категорию
+        </a>
+        <a href="{% url 'dashboard_product_add' %}" class="bg-green-600 text-white px-4 py-2.5 md:px-6 md:py-3 rounded-lg hover:bg-green-700 transition font-medium text-center touch-manipulation text-sm md:text-base">
+            + Добавить блюдо
+        </a>
+    </div>
+</div>
+
+<div class="space-y-4 md:space-y-8">
+    {% for category in categories %}
+    <div class="bg-white rounded-xl shadow-md p-4 md:p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-4">
+            <div class="flex items-center space-x-3 md:space-x-4">
+                {% if category.image %}
+                <img src="{{ category.image.url }}" alt="{{ category.name }}" class="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg shadow flex-shrink-0">
+                {% else %}
+                <div class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center shadow flex-shrink-0">
+                    <span class="text-2xl md:text-3xl text-gray-400">📁</span>
+                </div>
+                {% endif %}
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 truncate">{{ category.name }}</h2>
+                    <p class="text-xs md:text-sm text-gray-500 mt-1">Приоритет: {{ category.order_priority }} | Блюд: {{ category.products.count }}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 md:space-x-3 flex-shrink-0">
+                <span class="px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap {% if category.is_active %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                    {% if category.is_active %}✓ Активна{% else %}✗ Неактивна{% endif %}
+                </span>
+                <a href="{% url 'dashboard_category_edit' category.id %}" class="bg-indigo-100 text-indigo-700 px-3 md:px-4 py-2 rounded-lg hover:bg-indigo-200 transition font-medium text-sm md:text-base touch-manipulation whitespace-nowrap">
+                    ✏️ Редактировать
+                </a>
+                <a href="{% url 'dashboard_category_delete' category.id %}" class="bg-red-100 text-red-700 px-3 md:px-4 py-2 rounded-lg hover:bg-red-200 transition font-medium text-sm md:text-base touch-manipulation whitespace-nowrap" onclick="return confirm('Вы уверены, что хотите удалить категорию «{{ category.name }}»? Все товары в этой категории также будут удалены!');">
+                    🗑️ Удалить
+                </a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {% for product in category.products.all %}
+            <div class="border-2 {% if not product.is_available %}border-red-200 opacity-60{% else %}border-gray-200 hover:border-indigo-300{% endif %} rounded-xl overflow-hidden transition-all">
+                <div class="relative">
+                    {% if product.image %}
+                    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-32 md:h-40 object-cover">
+                    {% else %}
+                    <div class="w-full h-32 md:h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                        <span class="text-3xl md:text-4xl text-gray-300">🍽️</span>
+                    </div>
+                    {% endif %}
+                    <div class="absolute top-2 right-2">
+                        <label class="relative inline-flex items-center cursor-pointer touch-manipulation">
+                            <input type="checkbox" 
+                                   class="sr-only peer" 
+                                   {% if product.is_available %}checked{% endif %}
+                                   onchange="toggleProduct({{ product.id }}, this.checked)">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+                <div class="p-3 md:p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <h3 class="font-bold text-base md:text-lg text-gray-800 mb-1 truncate">{{ product.name }}</h3>
+                            {% if product.description %}
+                            <p class="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2">{{ product.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Дополнительная информация -->
+                    <div class="space-y-1 mb-3 text-xs text-gray-500">
+                        {% if product.weight %}
+                        <div class="flex items-center">
+                            <span class="mr-2">⚖️</span>
+                            <span class="truncate">{{ product.weight }}</span>
+                        </div>
+                        {% endif %}
+                        {% if product.calories %}
+                        <div class="flex items-center">
+                            <span class="mr-2">🔥</span>
+                            <span>{{ product.calories }} ккал</span>
+                        </div>
+                        {% endif %}
+                        {% if product.cooking_time %}
+                        <div class="flex items-center">
+                            <span class="mr-2">⏱️</span>
+                            <span>{{ product.cooking_time }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 border-t gap-2">
+                        <span class="text-lg md:text-xl font-bold text-indigo-600 whitespace-nowrap">{{ product.price }} ₽</span>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <a href="{% url 'dashboard_product_edit' product.id %}" class="flex-1 sm:flex-none text-xs md:text-sm bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 transition text-center touch-manipulation">
+                                Редактировать
+                            </a>
+                            <a href="{% url 'dashboard_product_delete' product.id %}" class="flex-1 sm:flex-none text-xs md:text-sm bg-red-100 text-red-700 px-3 py-2 rounded hover:bg-red-200 transition text-center touch-manipulation" onclick="return confirm('Вы уверены, что хотите удалить товар «{{ product.name }}»?');">
+                                Удалить
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-8 md:py-12 text-gray-500 bg-gray-50 rounded-lg">
+                <span class="text-3xl md:text-4xl mb-2 block">🍽️</span>
+                <p class="text-base md:text-lg">Нет блюд в этой категории</p>
+                <a href="{% url 'dashboard_product_add' %}" class="text-indigo-600 hover:text-indigo-800 underline mt-2 inline-block text-sm md:text-base touch-manipulation">
+                    Добавить блюдо
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-xl shadow-md p-8 md:p-12 text-center">
+        <span class="text-4xl md:text-6xl mb-4 block">📋</span>
+        <p class="text-gray-600 text-base md:text-lg mb-4">Категории не добавлены</p>
+        <a href="{% url 'dashboard_category_add' %}" class="text-indigo-600 hover:text-indigo-800 underline text-base md:text-lg touch-manipulation">
+            Добавить категорию
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function toggleProduct(productId, isAvailable) {
+    fetch(`/dashboard/products/${productId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

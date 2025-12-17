@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Статус заказа #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                {% if order.status == 'new' %}
+                <svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% elif order.status == 'cooking' %}
+                <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                {% elif order.status == 'done' %}
+                <svg class="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                {% endif %}
+            </div>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Заказ #{{ order.id }}</h1>
+            <p class="text-lg text-gray-600">{{ order.get_status_display }}</p>
+        </div>
+
+        <div class="space-y-4 mb-8">
+            <div class="flex justify-between py-3 border-b">
+                <span class="text-gray-600">Номер:</span>
+                <span class="font-semibold">{{ order.room }}</span>
+            </div>
+            <div class="flex justify-between py-3 border-b">
+                <span class="text-gray-600">Время заказа:</span>
+                <span class="font-semibold">{{ order.created_at|date:"H:i" }}</span>
+            </div>
+            <div class="flex justify-between py-3 border-b">
+                <span class="text-gray-600">Сумма:</span>
+                <span class="font-semibold text-indigo-600 text-xl">{{ order.total_price }} ₽</span>
+            </div>
+        </div>
+
+        <div class="mb-8">
+            <h2 class="text-xl font-bold mb-4">Состав заказа:</h2>
+            <div class="space-y-3">
+                {% for item in order.items.all %}
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                    <div>
+                        <span class="font-medium">{{ item.product.name }}</span>
+                        <span class="text-gray-500 text-sm ml-2">x{{ item.quantity }}</span>
+                    </div>
+                    <span class="font-semibold">{{ item.get_total }} ₽</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if order.status != 'done' %}
+        <div class="text-center">
+            <p class="text-gray-600 mb-4">Мы обрабатываем ваш заказ. Пожалуйста, подождите.</p>
+            <button onclick="location.reload()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                Обновить статус
+            </button>
+        </div>
+        {% else %}
+        <div class="text-center">
+            <p class="text-green-600 font-medium mb-4">Заказ выполнен! Приятного аппетита!</p>
+            <a href="{% url 'order_page' order.room.slug %}" class="text-indigo-600 hover:text-indigo-800 underline">
+                Вернуться в меню
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if order.status != 'done' %}
+<script>
+// Auto-refresh every 5 seconds
+setInterval(function() {
+    location.reload();
+}, 5000);
+</script>
+{% endif %}
+{% endblock %}
+
+

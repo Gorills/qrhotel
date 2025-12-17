@@ -1,0 +1,43 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Добавить номер{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Добавить номер</h1>
+    
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="floor" class="block text-gray-700 font-medium mb-2">Этаж</label>
+                <select name="floor" id="floor" required 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <option value="">Выберите этаж</option>
+                    {% for floor in floors %}
+                    <option value="{{ floor.id }}">
+                        {% if floor.building %}{{ floor.building.name }} - {% endif %}Этаж {{ floor.number }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label for="number" class="block text-gray-700 font-medium mb-2">Номер комнаты</label>
+                <input type="text" name="number" id="number" required 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            </div>
+            
+            <div class="flex space-x-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Сохранить
+                </button>
+                <a href="{% url 'dashboard_rooms' %}" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - QR Hotel Service{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden" onclick="toggleMobileMenu()"></div>
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+            <div class="p-4 md:p-6 h-full overflow-y-auto">
+                <div class="flex items-center justify-between mb-6 md:mb-8">
+                    <div class="flex items-center space-x-3">
+                        {% if site_settings.logo %}
+                        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.site_name }}" class="h-8 md:h-10">
+                        {% endif %}
+                        <h1 class="text-xl md:text-2xl font-bold text-indigo-600">{{ site_settings.site_name|truncatewords:2 }}</h1>
+                    </div>
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-600 hover:text-gray-800">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <nav class="space-y-2">
+                    <a href="{% url 'dashboard_home' %}" onclick="closeMobileMenu()" class="block px-4 py-3 md:py-2 rounded-lg hover:bg-indigo-50 {% if request.resolver_match.url_name == 'dashboard_home' %}bg-indigo-100 text-indigo-700{% else %}text-gray-700{% endif %}">
+                        📊 Мониторинг
+                    </a>
+                    <a href="{% url 'dashboard_rooms' %}" onclick="closeMobileMenu()" class="block px-4 py-3 md:py-2 rounded-lg hover:bg-indigo-50 {% if request.resolver_match.url_name == 'dashboard_rooms' %}bg-indigo-100 text-indigo-700{% else %}text-gray-700{% endif %}">
+                        🏨 Номера
+                    </a>
+                    <a href="{% url 'dashboard_menu' %}" onclick="closeMobileMenu()" class="block px-4 py-3 md:py-2 rounded-lg hover:bg-indigo-50 {% if request.resolver_match.url_name == 'dashboard_menu' %}bg-indigo-100 text-indigo-700{% else %}text-gray-700{% endif %}">
+                        🍽️ Меню
+                    </a>
+                    <a href="{% url 'dashboard_statistics' %}" onclick="closeMobileMenu()" class="block px-4 py-3 md:py-2 rounded-lg hover:bg-indigo-50 {% if request.resolver_match.url_name == 'dashboard_statistics' %}bg-indigo-100 text-indigo-700{% else %}text-gray-700{% endif %}">
+                        📈 Статистика
+                    </a>
+                    <a href="{% url 'dashboard_settings' %}" onclick="closeMobileMenu()" class="block px-4 py-3 md:py-2 rounded-lg hover:bg-indigo-50 {% if request.resolver_match.url_name == 'dashboard_settings' %}bg-indigo-100 text-indigo-700{% else %}text-gray-700{% endif %}">
+                        ⚙️ Настройки
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto md:ml-0">
+            <!-- Header with Notifications -->
+            <div class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 md:py-4 flex items-center justify-between sticky top-0 z-30">
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-gray-600 hover:text-gray-800 p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <h2 class="text-lg md:text-xl font-semibold text-gray-800">{% block page_title %}Dashboard{% endblock %}</h2>
+                </div>
+                <div class="flex items-center space-x-2 md:space-x-4">
+                    <!-- Notifications Bell -->
+                    <div class="relative" id="notifications-container">
+                        <button onclick="toggleNotifications()" class="relative p-2 text-gray-600 hover:text-indigo-600 transition">
+                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                            </svg>
+                            <span id="notification-badge" class="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                        </button>
+                        <!-- Notifications Dropdown -->
+                        <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-[calc(100vw-2rem)] md:w-80 max-w-sm bg-white rounded-lg shadow-xl z-50 border border-gray-200 max-h-96 overflow-y-auto">
+                            <div class="p-4 border-b border-gray-200">
+                                <h3 class="font-semibold text-gray-800">Уведомления</h3>
+                            </div>
+                            <div id="notifications-list" class="divide-y divide-gray-200">
+                                <div class="p-4 text-center text-gray-500 text-sm">Нет новых уведомлений</div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{% url 'logout' %}" class="text-sm md:text-base text-gray-600 hover:text-indigo-600 transition px-2 md:px-0">Выйти</a>
+                </div>
+            </div>
+            <div class="p-4 md:p-8">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-16 md:top-4 right-2 md:right-4 left-2 md:left-auto z-50 space-y-2 max-w-sm md:max-w-sm mx-auto md:mx-0"></div>
+    
+    <script>
+        // Mobile menu functions
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+        
+        function closeMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        }
+        
+        // Close mobile menu on window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768) {
+                closeMobileMenu();
+            }
+        });
+    </script>
+    
+    <script>
+        let notificationsCheckInterval;
+        let lastNotificationTimestamp = 0;
+        let notificationAudio = null;
+        
+        // Инициализация звука уведомления
+        function initNotificationSound() {
+            {% if site_settings.notification_sound %}
+            notificationAudio = new Audio('{{ site_settings.notification_sound.url }}');
+            notificationAudio.volume = 0.7;
+            {% else %}
+            // Звук по умолчанию будет создаваться динамически
+            notificationAudio = null;
+            {% endif %}
+        }
+        
+        // Воспроизведение звука уведомления
+        function playNotificationSound() {
+            {% if site_settings.notification_sound %}
+            // Используем загруженный звук
+            if (notificationAudio) {
+                notificationAudio.currentTime = 0; // Сбрасываем на начало
+                notificationAudio.play().catch(error => {
+                    console.log('Не удалось воспроизвести звук:', error);
+                });
+            }
+            {% else %}
+            // Создаем звук по умолчанию через Web Audio API
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Простая мелодия: два тона
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+                
+                // Второй тон
+                setTimeout(() => {
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    
+                    osc2.connect(gain2);
+                    gain2.connect(audioContext.destination);
+                    
+                    osc2.frequency.value = 1000;
+                    osc2.type = 'sine';
+                    
+                    gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                    
+                    osc2.start(audioContext.currentTime);
+                    osc2.stop(audioContext.currentTime + 0.2);
+                }, 200);
+            } catch (error) {
+                console.log('Не удалось воспроизвести звук по умолчанию:', error);
+            }
+            {% endif %}
+        }
+        
+        // Загрузка уведомлений
+        function loadNotifications(showToasts = true) {
+            fetch('/api/notifications/unviewed/')
+                .then(response => response.json())
+                .then(data => {
+                    const previousCount = parseInt(document.getElementById('notification-badge').textContent) || 0;
+                    const currentCount = data.count;
+                    
+                    updateNotificationBadge(currentCount);
+                    updateNotificationsList(data.notifications);
+                    
+                    // Показываем всплывающие уведомления для новых заказов
+                    if (showToasts) {
+                        let hasNewNotifications = false;
+                        data.notifications.forEach(notification => {
+                            if (notification.created_at_timestamp > lastNotificationTimestamp) {
+                                showToastNotification(notification);
+                                lastNotificationTimestamp = Math.max(lastNotificationTimestamp, notification.created_at_timestamp);
+                                hasNewNotifications = true;
+                            }
+                        });
+                        
+                        // Воспроизводим звук только если есть новые уведомления
+                        if (hasNewNotifications && currentCount > previousCount) {
+                            playNotificationSound();
+                        }
+                    }
+                })
+                .catch(error => console.error('Error loading notifications:', error));
+        }
+        
+        // Обновление бейджа с количеством
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('notification-badge');
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        
+        // Обновление списка уведомлений
+        function updateNotificationsList(notifications) {
+            const list = document.getElementById('notifications-list');
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">Нет новых уведомлений</div>';
+                return;
+            }
+            
+            list.innerHTML = notifications.map(notif => `
+                <div class="p-4 hover:bg-gray-50 cursor-pointer transition" onclick="openOrder(${notif.order_id})">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800 text-sm">${notif.title}</p>
+                            <p class="text-xs text-gray-600 mt-1">${notif.message}</p>
+                            ${notif.items && notif.items.length > 0 ? `
+                                <div class="mt-2 text-xs text-gray-500">
+                                    ${notif.items.join(', ')}
+                                </div>
+                            ` : ''}
+                            <p class="text-xs text-gray-400 mt-1">${notif.time}</p>
+                        </div>
+                        <span class="ml-2 text-xs text-gray-400">${notif.status === 'new' ? '🆕' : notif.status === 'cooking' ? '🍳' : '✅'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Показ всплывающего уведомления
+        function showToastNotification(notification) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-white rounded-lg shadow-lg p-3 md:p-4 border-l-4 border-indigo-500 animate-slide-in w-full';
+            toast.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800 text-sm">${notification.title}</p>
+                        <p class="text-xs text-gray-600 mt-1">${notification.message}</p>
+                        ${notification.items && notification.items.length > 0 ? `
+                            <p class="text-xs text-gray-500 mt-1">${notification.items.slice(0, 2).join(', ')}${notification.items.length > 2 ? '...' : ''}</p>
+                        ` : ''}
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Автоматическое удаление через 5 секунд
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+            
+            // Клик по уведомлению открывает заказ
+            toast.addEventListener('click', () => {
+                openOrder(notification.order_id);
+            });
+        }
+        
+        // Открытие заказа
+        function openOrder(orderId) {
+            // Отмечаем заказ как просмотренный только при клике
+            fetch(`/api/orders/${orderId}/mark-viewed/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            }).then(() => {
+                // Обновляем список уведомлений после отметки
+                loadNotifications(false);
+            });
+            
+            // Переходим на страницу мониторинга и скроллим к заказу
+            if (window.location.pathname !== '/dashboard/') {
+                window.location.href = '/dashboard/#order-' + orderId;
+            } else {
+                // Если уже на странице мониторинга, скроллим к заказу
+                const orderElement = document.getElementById('order-' + orderId);
+                if (orderElement) {
+                    orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    orderElement.classList.add('ring-4', 'ring-yellow-400', 'ring-opacity-50');
+                    setTimeout(() => {
+                        orderElement.classList.remove('ring-4', 'ring-yellow-400', 'ring-opacity-50');
+                    }, 2000);
+                }
+            }
+            
+            // Закрываем dropdown
+            document.getElementById('notifications-dropdown').classList.add('hidden');
+        }
+        
+        // Переключение dropdown уведомлений
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notifications-dropdown');
+            dropdown.classList.toggle('hidden');
+            if (!dropdown.classList.contains('hidden')) {
+                loadNotifications(false); // Не показываем тосты при открытии dropdown
+            }
+        }
+        
+        // Закрытие dropdown при клике вне его
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('notifications-container');
+            if (!container.contains(event.target)) {
+                document.getElementById('notifications-dropdown').classList.add('hidden');
+            }
+        });
+        
+        // Получение CSRF токена
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Автоматическая проверка уведомлений каждые 3 секунды
+        document.addEventListener('DOMContentLoaded', function() {
+            initNotificationSound(); // Инициализируем звук
+            // Первая загрузка без тостов и звука - уведомления остаются до клика
+            loadNotifications(false);
+            // Устанавливаем начальный timestamp для отслеживания новых уведомлений
+            fetch('/api/notifications/unviewed/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.notifications && data.notifications.length > 0) {
+                        lastNotificationTimestamp = Math.max(...data.notifications.map(n => n.created_at_timestamp));
+                    }
+                });
+            // Обновляем уведомления каждые 3 секунды, показывая тосты только для новых
+            notificationsCheckInterval = setInterval(() => loadNotifications(true), 3000);
+        });
+        
+        // Остановка проверки при уходе со страницы
+        window.addEventListener('beforeunload', function() {
+            if (notificationsCheckInterval) {
+                clearInterval(notificationsCheckInterval);
+            }
+        });
+    </script>
+    
+    <style>
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+        }
+        
+        /* Touch optimization */
+        .touch-manipulation {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Prevent text selection on buttons */
+        button, a {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Better scrolling on mobile */
+        @media (max-width: 768px) {
+            body {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+    </style>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+

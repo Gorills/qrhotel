@@ -1,0 +1,48 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Добавить этаж{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">Добавить этаж</h1>
+    
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="building" class="block text-gray-700 font-medium mb-2">Корпус (опционально)</label>
+                <select name="building" id="building" 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <option value="">Без корпуса</option>
+                    {% for building in buildings %}
+                    <option value="{{ building.id }}">{{ building.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-sm text-gray-500 mt-2">
+                    Корпус можно не указывать. Если корпусов нет, можно 
+                    <a href="{% url 'dashboard_building_add' %}" class="text-indigo-600 hover:text-indigo-800 underline">
+                        создать корпус
+                    </a>
+                </p>
+            </div>
+            
+            <div class="mb-4">
+                <label for="number" class="block text-gray-700 font-medium mb-2">Номер этажа</label>
+                <input type="number" name="number" id="number" required min="1" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       placeholder="Например: 1, 2, 3...">
+            </div>
+            
+            <div class="flex space-x-4">
+                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Сохранить
+                </button>
+                <a href="{% url 'dashboard_rooms' %}" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

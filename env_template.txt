@@ -1,0 +1,22 @@
+# Production settings for Beget hosting
+# Скопируйте этот файл в .env и заполните значения
+
+USE_MYSQL=True
+DB_NAME=shopds7k_qr
+DB_USER=shopds7k_qr
+DB_PASSWORD=dl!r11mRZvq4
+DB_HOST=localhost
+DB_PORT=3306
+
+# Django settings
+DEBUG=False
+SECRET_KEY=CHANGE-THIS-TO-A-RANDOM-SECRET-KEY
+
+# Redis settings (for Channels/WebSocket)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# Telegram Bot (optional)
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+
