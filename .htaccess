@@ -1,3 +1,11 @@
 PassengerEnabled On
 PassengerAppRoot /home/s/shopds7k/dostavka-po-nomeram/public_html
 PassengerPython /home/s/shopds7k/dostavka-po-nomeram/public_html/venv/bin/python
+
+# Serve media files directly via Apache
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{REQUEST_URI} ^/media/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^media/(.*)$ /media/$1 [L]
+</IfModule>
