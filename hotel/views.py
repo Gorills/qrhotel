@@ -662,14 +662,28 @@ def dashboard_settings(request):
         settings.telegram_bot_token = request.POST.get('telegram_bot_token', '')
         settings.telegram_chat_id = request.POST.get('telegram_chat_id', '')
         
-        if 'logo' in request.FILES:
+        # Обработка логотипа
+        if request.POST.get('remove_logo') == 'true':
+            # Удаляем старый логотип если есть
+            if settings.logo:
+                settings.logo.delete(save=False)
+            settings.logo = None
+        elif 'logo' in request.FILES:
+            # Удаляем старый логотип перед загрузкой нового
+            if settings.logo:
+                settings.logo.delete(save=False)
             settings.logo = request.FILES['logo']
         
         # Обработка звука уведомления
         if 'notification_sound' in request.FILES:
+            # Удаляем старый звук перед загрузкой нового
+            if settings.notification_sound:
+                settings.notification_sound.delete(save=False)
             settings.notification_sound = request.FILES['notification_sound']
         # Если нужно удалить звук (оставить пустым для использования по умолчанию)
         if request.POST.get('remove_notification_sound') == 'true':
+            if settings.notification_sound:
+                settings.notification_sound.delete(save=False)
             settings.notification_sound = None
         
         settings.save()
