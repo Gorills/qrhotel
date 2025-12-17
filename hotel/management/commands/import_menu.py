@@ -56,6 +56,13 @@ class Command(BaseCommand):
                 continue
             
             # Проверка на категорию
+            # Категория должна быть:
+            # - Не начинаться с номера (1), 2), и т.д.)
+            # - Не быть описанием продукта (не содержать "Состав", "подается", и т.д.)
+            # - Не быть маркером списка (·)
+            # - Не быть мета-информацией (Объем, Цена, и т.д.)
+            # - Быть достаточно короткой (не более 50 символов обычно)
+            # - Не содержать запятые в начале (описания продуктов часто начинаются с ингредиентов через запятую)
             is_category = (
                 not re.match(r'^\d+\)', line) and
                 not line.startswith('·') and
@@ -67,7 +74,12 @@ class Command(BaseCommand):
                 not line.lower().startswith('подается') and
                 not line.lower().startswith('сливочно') and
                 len(line) > 2 and
-                not re.search(r'\d+\s*(?:рублей?|₽|р|P)', line)  # Не содержит цену
+                len(line) < 60 and  # Категории обычно короткие
+                not re.search(r'\d+\s*(?:рублей?|₽|р|P)', line) and  # Не содержит цену
+                not (',' in line and len(line.split(',')) > 2) and  # Не список ингредиентов
+                not line.lower().startswith('классический') and
+                not line.lower().startswith('авторские') and
+                not line.lower().startswith('прочие')
             )
             
             if is_category:
