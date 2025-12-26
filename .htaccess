@@ -1,6 +1,6 @@
 PassengerEnabled On
-PassengerAppRoot /home/s/shopds7k/dostavka-po-nomeram/public_html
-PassengerPython /home/s/shopds7k/dostavka-po-nomeram/public_html/venv/bin/python
+PassengerAppRoot /home/h/hazb1nh2/finik-i-myata.rf/public_html
+PassengerPython /home/h/hazb1nh2/finik-i-myata.rf/public_html/venv/bin/python
 
 # Serve media files directly via Apache (before Passenger)
 <IfModule mod_rewrite.c>
