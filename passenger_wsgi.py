@@ -1,6 +1,6 @@
 import os, sys
 
-site_user_root_dir = '/home/s/shopds7k/dostavka-po-nomeram/public_html'
+site_user_root_dir = '/home/h/hazb1nh2/finik-i-myata.rf/public_html'
 
 # Добавляем пользовательские site-packages для Python 3.10
 user_site_packages = os.path.expanduser('~/.local/lib/python3.10/site-packages')
@@ -21,4 +21,3 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'qrmenu.settings')
 from django.core.wsgi import get_wsgi_application
 
 application = get_wsgi_application()
-
