@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.text import slugify
 from django.urls import reverse
 import uuid
+import re
 import qrcode
 from io import BytesIO
 from django.core.files import File
@@ -58,12 +59,14 @@ class Room(models.Model):
         return f"Этаж {self.floor.number} - {self.number}"
     
     def save(self, *args, **kwargs):
-        if not self.slug:
+        # Пересоздаем slug если его нет или если он содержит недопустимые символы (кириллица и т.д.)
+        slug_pattern = re.compile(r'^[-a-zA-Z0-9_]+$')
+        if not self.slug or not slug_pattern.match(self.slug):
             if self.floor.building:
-                building_part = self.floor.building.name.lower().replace(' ', '-')
-                self.slug = f"{building_part}-{self.floor.number}-floor-room-{self.number}".replace(' ', '-')
+                building_part = slugify(self.floor.building.name)
+                self.slug = slugify(f"{building_part}-{self.floor.number}-floor-room-{self.number}")
             else:
-                self.slug = f"{self.floor.number}-floor-room-{self.number}".replace(' ', '-')
+                self.slug = slugify(f"{self.floor.number}-floor-room-{self.number}")
         super().save(*args, **kwargs)
         if not self.qr_code:
             self.generate_qr_code()
@@ -85,7 +88,22 @@ class Room(models.Model):
         qr.add_data(url)
         qr.make(fit=True)
         
+        # Создаем классический QR-код: черный на белом фоне
         img = qr.make_image(fill_color="black", back_color="white")
+        # Убеждаемся, что изображение в режиме RGB (без альфа-канала)
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Добавляем белую рамку вокруг QR-кода
+        border_size = 20  # Размер рамки в пикселях
+        qr_width, qr_height = img.size
+        # Создаем новое изображение с рамкой
+        bordered_img = Image.new('RGB', 
+                               (qr_width + border_size * 2, qr_height + border_size * 2), 
+                               'white')
+        # Вставляем QR-код в центр (с рамкой вокруг)
+        bordered_img.paste(img, (border_size, border_size))
+        img = bordered_img
         
         # Добавляем текст с номером комнаты
         draw = ImageDraw.Draw(img)

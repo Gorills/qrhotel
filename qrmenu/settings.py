@@ -39,7 +39,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['dostavka-po-nomeram.profit-platform.ru', 'localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = ['xn-----8kc3aabmtd0dn4l.xn--p1ai', 'dostavka-po-nomeram.profit-platform.ru', 'localhost', '127.0.0.1', '*']
 
 
 # Application definition
@@ -196,7 +196,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Site URL for QR code generation
-SITE_URL = os.environ.get('SITE_URL', 'http://dostavka-po-nomeram.profit-platform.ru')
+SITE_URL = os.environ.get('SITE_URL', 'https://xn-----8kc3aabmtd0dn4l.xn--p1ai')
 
 # Telegram Bot Settings
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')

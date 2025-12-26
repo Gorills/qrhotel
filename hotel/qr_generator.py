@@ -5,6 +5,7 @@ import qrcode
 from PIL import Image
 from io import BytesIO
 import zipfile
+import re
 
 
 @login_required
@@ -12,10 +13,11 @@ def generate_qr_images(request):
     """Генерация PNG файлов с QR-кодами для всех номеров (каждый отдельным файлом)"""
     building_id = request.GET.get('building_id')
     
+    # Используем select_related для оптимизации запросов и загрузки связанных объектов
     if building_id:
-        rooms = Room.objects.filter(floor__building_id=building_id, is_active=True)
+        rooms = Room.objects.filter(floor__building_id=building_id, is_active=True).select_related('floor', 'floor__building')
     else:
-        rooms = Room.objects.filter(is_active=True)
+        rooms = Room.objects.filter(is_active=True).select_related('floor', 'floor__building')
     
     # Создаем ZIP архив в памяти
     zip_buffer = BytesIO()
@@ -30,34 +32,89 @@ def generate_qr_images(request):
             )
             # Используем домен из настроек или из request
             from django.conf import settings
+            from django.urls import NoReverseMatch
             site_url = getattr(settings, 'SITE_URL', None)
-            if site_url:
-                site_url = site_url.rstrip('/')
-                url = f"{site_url}{room.get_absolute_url()}"
-            else:
-                url = request.build_absolute_uri(room.get_absolute_url())
+            try:
+                if site_url:
+                    site_url = site_url.rstrip('/')
+                    url = f"{site_url}{room.get_absolute_url()}"
+                else:
+                    url = request.build_absolute_uri(room.get_absolute_url())
+            except NoReverseMatch:
+                # Если slug некорректный, пересоздаем его и используем новый URL
+                from django.utils.text import slugify
+                if room.floor.building:
+                    building_part = slugify(room.floor.building.name)
+                    room.slug = slugify(f"{building_part}-{room.floor.number}-floor-room-{room.number}")
+                else:
+                    room.slug = slugify(f"{room.floor.number}-floor-room-{room.number}")
+                room.save(update_fields=['slug'])
+                # Теперь формируем URL снова
+                if site_url:
+                    url = f"{site_url}{room.get_absolute_url()}"
+                else:
+                    url = request.build_absolute_uri(room.get_absolute_url())
             qr.add_data(url)
             qr.make(fit=True)
             
-            # Создаем изображение QR-кода
-            # Используем make_image с минимальными настройками для точного размера
+            # Создаем классический QR-код: черный на белом фоне
             qr_img = qr.make_image(fill_color="black", back_color="white")
+            # Убеждаемся, что изображение в режиме RGB (без альфа-канала)
+            if qr_img.mode != 'RGB':
+                qr_img = qr_img.convert('RGB')
             
-            # Убеждаемся, что изображение точно по размеру QR-кода
-            # Размер будет равен: (version * 4 + 17) * box_size пикселей
-            # Но так как border=0, размер будет точно по QR-коду
+            # Добавляем белую рамку вокруг QR-кода
+            border_size = 20  # Размер рамки в пикселях
+            qr_width, qr_height = qr_img.size
+            # Создаем новое изображение с рамкой
+            bordered_img = Image.new('RGB', 
+                                   (qr_width + border_size * 2, qr_height + border_size * 2), 
+                                   'white')
+            # Вставляем QR-код в центр (с рамкой вокруг)
+            bordered_img.paste(qr_img, (border_size, border_size))
+            qr_img = bordered_img
             
             # Сохраняем в BytesIO как PNG без сжатия для максимального качества
             img_buffer = BytesIO()
             qr_img.save(img_buffer, format='PNG', optimize=False)
             img_buffer.seek(0)
             
-            # Формируем имя файла (безопасное для файловой системы)
-            if room.floor.building:
-                building_name = room.floor.building.name.replace(' ', '_').replace('/', '_')
-                filename = f"qr_{building_name}_floor_{room.floor.number}_room_{room.number}.png"
-            else:
-                filename = f"qr_floor_{room.floor.number}_room_{room.number}.png"
+            # Формируем имя файла с всеми доступными данными (безопасное для файловой системы)
+            def sanitize_filename(name):
+                """Очищает имя от недопустимых символов для файловой системы"""
+                if name is None:
+                    return ''
+                # Заменяем пробелы и специальные символы на подчеркивания
+                name = re.sub(r'[^\w\-_\.]', '_', str(name))
+                # Убираем множественные подчеркивания
+                name = re.sub(r'_+', '_', name)
+                return name.strip('_')
+            
+            # Собираем части имени файла с всеми доступными данными
+            parts = ['qr']
+            
+            # Добавляем корпус, если есть (явно указываем в имени файла)
+            try:
+                building = room.floor.building
+                if building and building.name:
+                    building_name = sanitize_filename(building.name)
+                    if building_name:
+                        parts.append(f'building_{building_name}')
+            except (AttributeError, TypeError):
+                pass  # Корпус отсутствует, пропускаем
+            
+            # Добавляем этаж (всегда есть, явно указываем в имени файла)
+            floor_number = sanitize_filename(str(room.floor.number))
+            if floor_number:
+                parts.append(f'floor_{floor_number}')
+            
+            # Добавляем номер комнаты (всегда есть, явно указываем в имени файла)
+            room_number = sanitize_filename(str(room.number))
+            if room_number:
+                parts.append(f'room_{room_number}')
+            
+            # Формируем итоговое имя файла
+            filename = '_'.join(parts) + '.png'
             
             # Добавляем в ZIP
             zip_file.writestr(filename, img_buffer.getvalue())
