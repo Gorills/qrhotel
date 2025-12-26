@@ -17,6 +17,36 @@ def home(request):
     return render(request, 'hotel/home.html')
 
 
+def building_page(request, building_slug):
+    """Страница корпуса с меню - использует тот же шаблон, что и номер"""
+    building = get_object_or_404(Building, slug=building_slug, is_active=True)
+    
+    # Получаем категории и продукты (как на странице номера)
+    categories = Category.objects.filter(is_active=True).prefetch_related(
+        Prefetch('products', queryset=Product.objects.filter(is_available=True))
+    )
+    
+    # Получаем активные заказы для корпуса
+    session_key = request.session.session_key
+    active_order = None
+    if session_key:
+        active_order = Order.objects.filter(
+            building=building,
+            session_key=session_key,
+            is_archived=False,
+            status__in=['new', 'cooking']
+        ).first()
+    
+    context = {
+        'building': building,
+        'room': None,  # Для совместимости с шаблоном
+        'categories': categories,
+        'active_order': active_order,
+        'is_building': True,  # Флаг для определения типа
+    }
+    return render(request, 'hotel/order_page.html', context)
+
+
 def order_page(request, room_slug):
     """Страница меню для гостя"""
     room = get_object_or_404(Room, slug=room_slug, is_active=True)
@@ -37,8 +67,10 @@ def order_page(request, room_slug):
     
     context = {
         'room': room,
+        'building': None,  # Для совместимости с шаблоном
         'categories': categories,
         'active_order': active_order,
+        'is_building': False,  # Флаг для определения типа
     }
     return render(request, 'hotel/order_page.html', context)
 
@@ -208,6 +240,456 @@ def create_order(request, room_slug):
     return JsonResponse({'success': False})
 
 
+@csrf_exempt
+def building_cart_add(request, building_slug):
+    """Добавление товара в корзину для корпуса (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = data.get('product_id')
+            quantity = int(data.get('quantity', 1))
+            
+            building = get_object_or_404(Building, slug=building_slug, is_active=True)
+            product = get_object_or_404(Product, id=product_id, is_available=True)
+            
+            # Получаем или создаем корзину в сессии
+            if 'cart' not in request.session:
+                request.session['cart'] = {}
+            
+            cart = request.session['cart']
+            cart_key = str(product_id)
+            
+            if cart_key in cart:
+                cart[cart_key]['quantity'] += quantity
+            else:
+                cart[cart_key] = {
+                    'product_id': product_id,
+                    'quantity': quantity,
+                    'price': str(product.price),
+                }
+            
+            request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def building_cart_remove(request, building_slug):
+    """Удаление товара из корзины для корпуса (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = str(data.get('product_id'))
+            
+            if 'cart' in request.session:
+                cart = request.session['cart']
+                if product_id in cart:
+                    del cart[product_id]
+                    request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            cart = request.session.get('cart', {})
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def building_cart_update(request, building_slug):
+    """Обновление количества товара в корзине для корпуса (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = str(data.get('product_id'))
+            quantity = int(data.get('quantity', 1))
+            
+            if 'cart' in request.session:
+                cart = request.session['cart']
+                if product_id in cart:
+                    if quantity > 0:
+                        cart[product_id]['quantity'] = quantity
+                    else:
+                        del cart[product_id]
+                    request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            cart = request.session.get('cart', {})
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def building_get_cart(request, building_slug):
+    """Получение содержимого корзины для корпуса (AJAX)"""
+    cart = request.session.get('cart', {})
+    products_data = []
+    total = 0
+    
+    for item_data in cart.values():
+        try:
+            product = Product.objects.get(id=item_data['product_id'], is_available=True)
+            quantity = item_data['quantity']
+            price = float(item_data['price'])
+            
+            products_data.append({
+                'id': product.id,
+                'name': product.name,
+                'quantity': quantity,
+                'price': price,
+                'total': price * quantity,
+            })
+            total += price * quantity
+        except Product.DoesNotExist:
+            continue
+    
+    return JsonResponse({
+        'items': products_data,
+        'total': total,
+        'count': sum(item['quantity'] for item in products_data)
+    })
+
+
+def floor_page(request, floor_slug):
+    """Страница этажа с меню - использует тот же шаблон, что и номер"""
+    floor = get_object_or_404(Floor, slug=floor_slug, is_active=True)
+    
+    # Получаем категории и продукты (как на странице номера)
+    categories = Category.objects.filter(is_active=True).prefetch_related(
+        Prefetch('products', queryset=Product.objects.filter(is_available=True))
+    )
+    
+    # Получаем активные заказы для этажа
+    session_key = request.session.session_key
+    active_order = None
+    if session_key:
+        active_order = Order.objects.filter(
+            floor=floor,
+            session_key=session_key,
+            is_archived=False,
+            status__in=['new', 'cooking']
+        ).first()
+    
+    context = {
+        'floor': floor,
+        'room': None,  # Для совместимости с шаблоном
+        'building': None,  # Для совместимости с шаблоном
+        'categories': categories,
+        'active_order': active_order,
+        'is_building': False,  # Флаг для определения типа
+        'is_floor': True,  # Флаг для определения типа
+    }
+    return render(request, 'hotel/order_page.html', context)
+
+
+@csrf_exempt
+def floor_cart_add(request, floor_slug):
+    """Добавление товара в корзину для этажа (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = data.get('product_id')
+            quantity = int(data.get('quantity', 1))
+            
+            floor = get_object_or_404(Floor, slug=floor_slug, is_active=True)
+            product = get_object_or_404(Product, id=product_id, is_available=True)
+            
+            # Получаем или создаем корзину в сессии
+            if 'cart' not in request.session:
+                request.session['cart'] = {}
+            
+            cart = request.session['cart']
+            cart_key = str(product_id)
+            
+            if cart_key in cart:
+                cart[cart_key]['quantity'] += quantity
+            else:
+                cart[cart_key] = {
+                    'product_id': product_id,
+                    'quantity': quantity,
+                    'price': str(product.price),
+                }
+            
+            request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def floor_cart_remove(request, floor_slug):
+    """Удаление товара из корзины для этажа (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = str(data.get('product_id'))
+            
+            if 'cart' in request.session:
+                cart = request.session['cart']
+                if product_id in cart:
+                    del cart[product_id]
+                    request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            cart = request.session.get('cart', {})
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def floor_cart_update(request, floor_slug):
+    """Обновление количества товара в корзине для этажа (AJAX)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            product_id = str(data.get('product_id'))
+            quantity = int(data.get('quantity', 1))
+            
+            if 'cart' in request.session:
+                cart = request.session['cart']
+                if product_id in cart:
+                    if quantity > 0:
+                        cart[product_id]['quantity'] = quantity
+                    else:
+                        del cart[product_id]
+                    request.session.modified = True
+            
+            # Подсчитываем общую сумму
+            cart = request.session.get('cart', {})
+            total = sum(
+                float(item['price']) * item['quantity']
+                for item in cart.values()
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'total': total,
+                'cart_count': sum(item['quantity'] for item in cart.values())
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False})
+
+
+@csrf_exempt
+def floor_get_cart(request, floor_slug):
+    """Получение содержимого корзины для этажа (AJAX)"""
+    cart = request.session.get('cart', {})
+    products_data = []
+    total = 0
+    
+    for item_data in cart.values():
+        try:
+            product = Product.objects.get(id=item_data['product_id'], is_available=True)
+            quantity = item_data['quantity']
+            price = float(item_data['price'])
+            
+            products_data.append({
+                'id': product.id,
+                'name': product.name,
+                'quantity': quantity,
+                'price': price,
+                'total': price * quantity,
+            })
+            total += price * quantity
+        except Product.DoesNotExist:
+            continue
+    
+    return JsonResponse({
+        'items': products_data,
+        'total': total,
+        'count': sum(item['quantity'] for item in products_data)
+    })
+
+
+@csrf_exempt
+def floor_create_order(request, floor_slug):
+    """Создание заказа для этажа"""
+    if request.method == 'POST':
+        floor = get_object_or_404(Floor, slug=floor_slug, is_active=True)
+        cart = request.session.get('cart', {})
+        
+        if not cart:
+            return JsonResponse({'success': False, 'error': 'Корзина пуста'})
+        
+        # Создаем заказ для этажа
+        total_price = sum(
+            float(item['price']) * item['quantity']
+            for item in cart.values()
+        )
+        
+        order = Order.objects.create(
+            floor=floor,
+            total_price=total_price,
+            status='new',
+            session_key=request.session.session_key or '',
+            is_viewed=False,
+        )
+        
+        # Создаем позиции заказа
+        for item_data in cart.values():
+            product = Product.objects.get(id=item_data['product_id'])
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=item_data['quantity'],
+                price_at_moment=product.price,
+            )
+        
+        # Очищаем корзину
+        request.session['cart'] = {}
+        request.session.modified = True
+        
+        # Отправляем уведомление в Telegram
+        send_telegram_notification(order)
+        
+        return JsonResponse({
+            'success': True,
+            'order_id': order.id,
+            'redirect_url': f'/floor/{floor_slug}/status/{order.id}/'
+        })
+    
+    return JsonResponse({'success': False})
+
+
+def floor_order_status(request, floor_slug, order_id):
+    """Страница статуса заказа для этажа"""
+    floor = get_object_or_404(Floor, slug=floor_slug, is_active=True)
+    order = get_object_or_404(Order, id=order_id, floor=floor)
+    
+    context = {
+        'order': order,
+        'floor': floor,
+    }
+    return render(request, 'hotel/floor_order_status.html', context)
+
+
+def building_order_status(request, building_slug, order_id):
+    """Страница статуса заказа для корпуса"""
+    building = get_object_or_404(Building, slug=building_slug, is_active=True)
+    order = get_object_or_404(Order, id=order_id, building=building)
+    
+    context = {
+        'order': order,
+        'building': building,
+    }
+    return render(request, 'hotel/building_order_status.html', context)
+
+
+@csrf_exempt
+def building_create_order(request, building_slug):
+    """Создание заказа для корпуса"""
+    if request.method == 'POST':
+        building = get_object_or_404(Building, slug=building_slug, is_active=True)
+        cart = request.session.get('cart', {})
+        
+        if not cart:
+            return JsonResponse({'success': False, 'error': 'Корзина пуста'})
+        
+        # Создаем заказ для корпуса
+        total_price = sum(
+            float(item['price']) * item['quantity']
+            for item in cart.values()
+        )
+        
+        order = Order.objects.create(
+            building=building,
+            total_price=total_price,
+            status='new',
+            session_key=request.session.session_key or '',
+            is_viewed=False,
+        )
+        
+        # Создаем позиции заказа
+        for item_data in cart.values():
+            product = Product.objects.get(id=item_data['product_id'])
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=item_data['quantity'],
+                price_at_moment=product.price,
+            )
+        
+        # Очищаем корзину
+        request.session['cart'] = {}
+        request.session.modified = True
+        
+        # Отправляем уведомление в Telegram
+        send_telegram_notification(order)
+        
+        # Для заказа корпуса создаем страницу статуса заказа
+        # Используем building_slug для редиректа
+        return JsonResponse({
+            'success': True,
+            'order_id': order.id,
+            'redirect_url': f'/building/{building_slug}/status/{order.id}/'
+        })
+    
+    return JsonResponse({'success': False})
+
+
 def order_status(request, room_slug, order_id):
     """Страница статуса заказа"""
     room = get_object_or_404(Room, slug=room_slug)
@@ -253,7 +735,7 @@ def get_cart(request, room_slug):
 @login_required
 def dashboard_home(request):
     """Главная страница дашборда - Live мониторинг"""
-    orders = Order.objects.filter(is_archived=False).select_related('room', 'room__floor', 'room__floor__building').prefetch_related('items__product').order_by('-created_at')[:50]
+    orders = Order.objects.filter(is_archived=False).select_related('room', 'room__floor', 'room__floor__building', 'building', 'floor', 'floor__building').prefetch_related('items__product').order_by('-created_at')[:50]
     
     # Статистика
     today = timezone.now().date()
@@ -392,13 +874,30 @@ def dashboard_floor_add(request):
     buildings = Building.objects.all()
     if request.method == 'POST':
         building_id = request.POST.get('building')
+        name = request.POST.get('name', '').strip()
         number = request.POST.get('number')
-        if number:
+        
+        if name:  # Название обязательно
             building = None
             if building_id:
                 building = get_object_or_404(Building, id=building_id)
-            Floor.objects.create(building=building, number=number)
+            
+            # Преобразуем number в int, если указан, иначе None
+            floor_number = int(number) if number else None
+            
+            Floor.objects.create(
+                building=building,
+                name=name,
+                number=floor_number
+            )
             return redirect('dashboard_rooms')
+        else:
+            # Если название не указано, показываем ошибку
+            context = {
+                'buildings': buildings,
+                'error': 'Название этажа обязательно для заполнения'
+            }
+            return render(request, 'dashboard/floor_add.html', context)
     context = {'buildings': buildings}
     return render(request, 'dashboard/floor_add.html', context)
 
@@ -480,6 +979,54 @@ def dashboard_room_delete(request, room_id):
 
 @login_required
 @require_http_methods(["POST"])
+def dashboard_floor_regenerate_qr(request, floor_id):
+    """Перегенерация QR-кода для этажа"""
+    floor = get_object_or_404(Floor, id=floor_id)
+    floor_name = floor.name
+    
+    try:
+        # Удаляем старый QR-код если есть
+        if floor.qr_code:
+            floor.qr_code.delete(save=False)
+        
+        # Генерируем новый QR-код
+        floor.generate_qr_code()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'QR-код для этажа "{floor_name}" перегенерирован'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Ошибка при перегенерации QR-кода: {str(e)}'
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+def dashboard_building_regenerate_qr(request, building_id):
+    """Перегенерация QR-кода для корпуса"""
+    if request.method == 'POST':
+        try:
+            building = get_object_or_404(Building, id=building_id)
+            # Удаляем старый QR-код если есть
+            if building.qr_code:
+                building.qr_code.delete(save=False)
+            # Генерируем новый
+            building.generate_qr_code()
+            return JsonResponse({
+                'success': True,
+                'message': f'QR-код для корпуса "{building.name}" успешно перегенерирован'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    return JsonResponse({'success': False, 'error': 'Метод не разрешен'})
+
+
 def dashboard_room_regenerate_qr(request, room_id):
     """Перегенерация QR-кода для номера"""
     room = get_object_or_404(Room, id=room_id)

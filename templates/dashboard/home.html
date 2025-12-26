@@ -77,11 +77,17 @@
                         <div class="flex-1">
                             <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
                             <div class="text-sm text-gray-600 mt-1">
+                                {% if order.room %}
                                 <p class="font-medium">📍 {{ order.room.number }}</p>
                                 {% if order.room.floor.building %}
                                 <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
                                 {% else %}
                                 <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                                {% elif order.building %}
+                                <p class="font-medium">📍 Корпус {{ order.building.name }}</p>
+                                {% else %}
+                                <p class="font-medium">📍 Не указано</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -124,11 +130,17 @@
                         <div class="flex-1">
                             <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
                             <div class="text-sm text-gray-600 mt-1">
+                                {% if order.room %}
                                 <p class="font-medium">📍 {{ order.room.number }}</p>
                                 {% if order.room.floor.building %}
                                 <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
                                 {% else %}
                                 <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                                {% elif order.building %}
+                                <p class="font-medium">📍 Корпус {{ order.building.name }}</p>
+                                {% else %}
+                                <p class="font-medium">📍 Не указано</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -166,11 +178,17 @@
                         <div class="flex-1">
                             <p class="font-bold text-gray-800">Заказ #{{ order.id }}</p>
                             <div class="text-sm text-gray-600 mt-1">
+                                {% if order.room %}
                                 <p class="font-medium">📍 {{ order.room.number }}</p>
                                 {% if order.room.floor.building %}
                                 <p class="text-xs text-gray-500">{{ order.room.floor.building.name }}, Этаж {{ order.room.floor.number }}</p>
                                 {% else %}
                                 <p class="text-xs text-gray-500">Этаж {{ order.room.floor.number }}</p>
+                                {% endif %}
+                                {% elif order.building %}
+                                <p class="font-medium">📍 Корпус {{ order.building.name }}</p>
+                                {% else %}
+                                <p class="font-medium">📍 Не указано</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -369,7 +387,7 @@ function renderOrderCard(order, status) {
                 <div class="flex-1">
                     <p class="font-bold text-gray-800">Заказ #${order.id}</p>
                     <div class="text-sm text-gray-600 mt-1">
-                        <p class="font-medium">📍 ${order.room_number}</p>
+                        <p class="font-medium">📍 ${order.room_number ? order.room_number : (order.building ? 'Корпус ' + order.building : 'Не указано')}</p>
                         <p class="text-xs text-gray-500">${buildingInfo}</p>
                     </div>
                 </div>

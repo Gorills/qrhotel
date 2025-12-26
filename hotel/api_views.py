@@ -76,7 +76,7 @@ def orders_live(request):
     
     status_filter = request.GET.get('status', '')
     
-    orders = Order.objects.filter(is_archived=False).select_related('room', 'room__floor', 'room__floor__building').prefetch_related('items__product').order_by('-created_at')
+    orders = Order.objects.filter(is_archived=False).select_related('room', 'room__floor', 'room__floor__building', 'building', 'floor', 'floor__building').prefetch_related('items__product').order_by('-created_at')
     
     if status_filter:
         orders = orders.filter(status=status_filter)
@@ -85,11 +85,30 @@ def orders_live(request):
     
     orders_data = []
     for order in orders:
-        room_info = f"{order.room.number}"
-        if order.room.floor.building:
-            room_info += f" ({order.room.floor.building.name}, Этаж {order.room.floor.number})"
+        if order.room:
+            room_info = f"{order.room.number}"
+            if order.room.floor and order.room.floor.building:
+                room_info += f" ({order.room.floor.building.name}, {order.room.floor.name})"
+            elif order.room.floor:
+                room_info += f" ({order.room.floor.name})"
+            room_number = order.room.number
+            building_name = order.room.floor.building.name if order.room.floor and order.room.floor.building else None
+            floor_number = order.room.floor.name if order.room.floor else None
+        elif order.building:
+            room_info = f"Корпус {order.building.name}"
+            room_number = None
+            building_name = order.building.name
+            floor_number = None
+        elif order.floor:
+            room_info = f"Этаж {order.floor.name}"
+            room_number = None
+            building_name = order.floor.building.name if order.floor.building else None
+            floor_number = order.floor.name
         else:
-            room_info += f" (Этаж {order.room.floor.number})"
+            room_info = "Не указано"
+            room_number = None
+            building_name = None
+            floor_number = None
         
         items_data = []
         for item in order.items.all():
@@ -102,9 +121,9 @@ def orders_live(request):
         orders_data.append({
             'id': order.id,
             'room': room_info,
-            'room_number': order.room.number,
-            'building': order.room.floor.building.name if order.room.floor.building else None,
-            'floor': order.room.floor.number,
+            'room_number': room_number,
+            'building': building_name,
+            'floor': floor_number,
             'total_price': float(order.total_price),
             'status': order.status,
             'status_display': order.get_status_display(),
@@ -125,15 +144,22 @@ def unviewed_orders(request):
     orders = Order.objects.filter(
         is_archived=False,
         is_viewed=False
-    ).select_related('room', 'room__floor', 'room__floor__building').prefetch_related('items__product').order_by('-created_at')[:20]
+    ).select_related('room', 'room__floor', 'room__floor__building', 'building', 'floor', 'floor__building').prefetch_related('items__product').order_by('-created_at')[:20]
     
     notifications = []
     for order in orders:
-        room_info = f"{order.room.number}"
-        if order.room.floor.building:
-            room_info += f" ({order.room.floor.building.name}, Этаж {order.room.floor.number})"
+        if order.room:
+            room_info = f"{order.room.number}"
+            if order.room.floor and order.room.floor.building:
+                room_info += f" ({order.room.floor.building.name}, {order.room.floor.name})"
+            elif order.room.floor:
+                room_info += f" ({order.room.floor.name})"
+        elif order.building:
+            room_info = f"Корпус {order.building.name}"
+        elif order.floor:
+            room_info = f"Этаж {order.floor.name}"
         else:
-            room_info += f" (Этаж {order.room.floor.number})"
+            room_info = "Не указано"
         
         items_summary = []
         for item in order.items.all()[:3]:

@@ -13,8 +13,10 @@ urlpatterns = [
     # Management URLs
     path('building/add/', views.dashboard_building_add, name='dashboard_building_add'),
     path('building/<int:building_id>/delete/', views.dashboard_building_delete, name='dashboard_building_delete'),
+    path('building/<int:building_id>/regenerate-qr/', views.dashboard_building_regenerate_qr, name='dashboard_building_regenerate_qr'),
     path('floor/add/', views.dashboard_floor_add, name='dashboard_floor_add'),
     path('floor/<int:floor_id>/delete/', views.dashboard_floor_delete, name='dashboard_floor_delete'),
+    path('floor/<int:floor_id>/regenerate-qr/', views.dashboard_floor_regenerate_qr, name='dashboard_floor_regenerate_qr'),
     path('room/add/', views.dashboard_room_add, name='dashboard_room_add'),
     path('room/<int:room_id>/delete/', views.dashboard_room_delete, name='dashboard_room_delete'),
     path('room/<int:room_id>/regenerate-qr/', views.dashboard_room_regenerate_qr, name='dashboard_room_regenerate_qr'),

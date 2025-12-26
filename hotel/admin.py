@@ -4,15 +4,19 @@ from .models import Building, Floor, Room, Category, Product, Order, OrderItem
 
 @admin.register(Building)
 class BuildingAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    search_fields = ['name']
+    list_display = ['name', 'is_active', 'slug']
+    search_fields = ['name', 'slug']
+    readonly_fields = ['token', 'qr_code']
+    list_editable = ['is_active']
 
 
 @admin.register(Floor)
 class FloorAdmin(admin.ModelAdmin):
-    list_display = ['building', 'number']
-    list_filter = ['building']
-    search_fields = ['number']
+    list_display = ['name', 'building', 'number', 'is_active', 'slug']
+    list_filter = ['building', 'is_active']
+    search_fields = ['name', 'number', 'slug']
+    readonly_fields = ['token', 'qr_code']
+    list_editable = ['is_active']
 
 
 @admin.register(Room)
@@ -47,9 +51,9 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'room', 'total_price', 'status', 'created_at']
+    list_display = ['id', 'room', 'building', 'floor', 'total_price', 'status', 'created_at']
     list_filter = ['status', 'created_at', 'is_archived']
-    search_fields = ['room__number', 'session_key']
+    search_fields = ['room__number', 'building__name', 'floor__name', 'session_key']
     readonly_fields = ['created_at', 'updated_at', 'session_key']
     inlines = [OrderItemInline]
     date_hierarchy = 'created_at'
